@@ -5,20 +5,16 @@ import os
 import shutil
 import sys
 
-
-
 def generate_pages_recursive(dir_path_content, template_path, dest_dir_path, basepath):
-    
     for item in os.listdir(dir_path_content):
         item_path = os.path.join(dir_path_content, item)
         if os.path.isfile(item_path):
-            #item_path = item_path[:-2] + "html"
             generate_page(item_path, template_path, dest_dir_path, basepath)
         else:
             new_dist_path = os.path.join(dest_dir_path, item)
-            generate_pages_recursive(item_path, template_path, new_dist_path)
+            generate_pages_recursive(item_path, template_path, new_dist_path, basepath)
+
 def main():
-    # Check if a command-line argument was provided
     if len(sys.argv) > 1:
         basepath = sys.argv[1]
     else:
@@ -28,27 +24,33 @@ def main():
     target_folder = "/home/anes/boots/static_site"
     
     if not os.path.exists(target_folder):
-        raise Exception("path doesn t exists")
-    public_folder = os.path.join(target_folder, "public")
+        raise Exception("path doesn't exist")
+        
+    # Updated to use docs instead of public
+    docs_folder = os.path.join(target_folder, "docs")
     static_folder = os.path.join(target_folder, "static")
     
-    if not os.path.exists(public_folder)  or not os.path.exists(static_folder) :
-        raise Exception("static or public folder doesn t exists")
-    shutil.rmtree(public_folder)
-    os.mkdir(public_folder)
+    if not os.path.exists(static_folder):
+        raise Exception("static folder doesn't exist")
+        
+    if os.path.exists(docs_folder):
+        shutil.rmtree(docs_folder)
+    os.mkdir(docs_folder)
+    
     static_files = os.listdir(static_folder)
-    recursion(static_folder, static_files, public_folder)
+    recursion(static_folder, static_files, docs_folder)
+    
     content_folder = os.path.join(target_folder, "content")
     template_path = os.path.join(target_folder,"template.html")
-    generate_pages_recursive(content_folder, template_path, public_folder, basepath)
+    generate_pages_recursive(content_folder, template_path, docs_folder, basepath)
     
-def recursion(target_folder, static_files, public_folder):
+def recursion(target_folder, static_files, dest_folder):
     for file in static_files:
         file_path = os.path.join(target_folder, file)
-        dest_path = os.path.join(public_folder, file)
+        dest_path = os.path.join(dest_folder, file)
         
         if os.path.isfile(file_path):
-            shutil.copy(file_path, public_folder)
+            shutil.copy(file_path, dest_folder)
             
         else:
             if not os.path.exists(dest_path):
@@ -76,18 +78,15 @@ def generate_page(from_path, template_path, dest_path, basepath):
     title = extract_title(markdown_content)
     final_html = template_content.replace("{{ Title }}",title)
     final_html = final_html.replace("{{ Content }}", html_content)
-    final_html = final_html.replace("href="/", href="{basepath})
-    final_html = final_html.replace("src="/", src="{basepath})
+    
+    final_html = final_html.replace('href="/', f'href="{basepath}')
+    final_html = final_html.replace('src="/', f'src="{basepath}')
     
     dest_dir = os.path.dirname(dest_path)
     if dest_dir:
         os.makedirs(dest_dir, exist_ok=True)
     with open(dest_path, "w") as file:
         file.write(final_html)
-
-
-    
-
 
 if __name__ == "__main__":
     main()
